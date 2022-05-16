@@ -1,5 +1,8 @@
-from django.db import models
+from phonenumber_field.modelfields import PhoneNumberField
+
 from django.core.validators import MinValueValidator
+
+from django.db import models
 
 
 class Restaurant(models.Model):
@@ -10,12 +13,10 @@ class Restaurant(models.Model):
     address = models.CharField(
         'адрес',
         max_length=100,
-        blank=True,
     )
     contact_phone = models.CharField(
         'контактный телефон',
         max_length=50,
-        blank=True,
     )
 
     class Meta:
@@ -30,8 +31,8 @@ class ProductQuerySet(models.QuerySet):
     def available(self):
         products = (
             RestaurantMenuItem.objects
-            .filter(availability=True)
-            .values_list('product')
+                .filter(availability=True)
+                .values_list('product')
         )
         return self.filter(pk__in=products)
 
@@ -80,7 +81,6 @@ class Product(models.Model):
     description = models.TextField(
         'описание',
         max_length=500,
-        blank=True,
     )
 
     objects = ProductQuerySet.as_manager()
@@ -109,7 +109,7 @@ class RestaurantMenuItem(models.Model):
     availability = models.BooleanField(
         'в продаже',
         default=True,
-        db_index=True
+        db_index=True,
     )
 
     class Meta:
@@ -121,3 +121,55 @@ class RestaurantMenuItem(models.Model):
 
     def __str__(self):
         return f"{self.restaurant.name} - {self.product.name}"
+
+
+class Order(models.Model):
+    firstname = models.CharField(
+        'Имя',
+        max_length=250,
+        db_index=True,
+    )
+    lastname = models.CharField(
+        'Фамилия',
+        max_length=250,
+        db_index=True,
+    )
+    phonenumber = PhoneNumberField(
+        'Номер телефона',
+        db_index=True,
+    )
+    address = models.TextField(verbose_name='Адрес')
+    order_items = models.ManyToManyField(
+        Product,
+        verbose_name='Позиция в заказе',
+        through='OrderProduct',
+        related_name='orders',
+    )
+
+    class Meta:
+        verbose_name = 'Заказ'
+        verbose_name_plural = 'Заказы'
+
+    def __str__(self):
+        return f'{self.pk} {self.firstname}, {self.address}'
+
+
+class OrderProduct(models.Model):
+    product = models.ForeignKey(
+        Product,
+        verbose_name='Товар',
+        on_delete=models.CASCADE,
+    )
+    order = models.ForeignKey(
+        Order,
+        verbose_name='Номер заказа',
+        on_delete=models.CASCADE,
+    )
+    quantity = models.IntegerField('Количество товара')
+
+    class Meta:
+        verbose_name = 'Позиции заказов'
+        verbose_name_plural = 'Позиции заказов'
+
+    def __str__(self):
+        return f'#{self.order.pk} order: {self.product} × {self.quantity}'
