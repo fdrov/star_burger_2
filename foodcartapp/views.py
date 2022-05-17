@@ -1,5 +1,8 @@
 import json
 
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
 from django.http import JsonResponse
 from django.templatetags.static import static
 
@@ -57,13 +60,15 @@ def product_list_api(request):
         'indent': 4,
     })
 
+
 # {'products': [{'product': 3, 'quantity': 5}, {'product': 5, 'quantity': 1}],
 # 'firstname': 'ANTON', 'lastname': 'FEDOROV', 'phonenumber': '89092832015', 'address': 'Sovetskaya street, 14, 63, '}
 
 
+@api_view(['POST'])
 def register_order(request):
-    order_raw = json.loads(request.body.decode())
-    if order_raw['products']:
+    order_raw = request.data
+    if order_raw.get('products'):
         order = Order.objects.create(firstname=order_raw['firstname'],
                                      lastname=order_raw['firstname'],
                                      phonenumber=order_raw['phonenumber'],
@@ -75,6 +80,5 @@ def register_order(request):
                          order=order,
                          quantity=order_item['quantity']
                          ).save()
-        return JsonResponse({'response': 'ok'})
-    return JsonResponse({'response': 'There is no any Product in order'})
-
+        return Response({'status': 'OK'})
+    return Response({'status': 'No products'})
