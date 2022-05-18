@@ -2,6 +2,7 @@ import json
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework import status
 
 from django.http import JsonResponse
 from django.templatetags.static import static
@@ -62,12 +63,25 @@ def product_list_api(request):
 
 
 # {'products': [{'product': 3, 'quantity': 5}, {'product': 5, 'quantity': 1}],
-# 'firstname': 'ANTON', 'lastname': 'FEDOROV', 'phonenumber': '89092832015', 'address': 'Sovetskaya street, 14, 63, '}
+# 'firstname': 'IVAN', 'lastname': 'IVANOV', 'phonenumber': '89999992022', 'address': 'Pushkina street, 12, 22, '}
 
 
 @api_view(['POST'])
 def register_order(request):
     order_raw = request.data
+    print(order_raw)
+    try:
+        assert isinstance(order_raw['products'], list)
+    except KeyError:
+        return Response(
+            {'error': 'products: Обязательное поле.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    except AssertionError:
+        return Response(
+            {'error': 'products: Ожидался list со значениями'},
+            status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
     if order_raw.get('products'):
         order = Order.objects.create(firstname=order_raw['firstname'],
                                      lastname=order_raw['firstname'],
@@ -77,8 +91,14 @@ def register_order(request):
         for order_item in order_raw['products']:
             product = Product.objects.get(pk=order_item['product'])
             OrderProduct(product=product,
+                         quantity=order_item['quantity'],
                          order=order,
-                         quantity=order_item['quantity']
                          ).save()
-        return Response({'status': 'OK'})
-    return Response({'status': 'No products'})
+        return Response(
+            {'status': 'OK'},
+            status=status.HTTP_200_OK,
+        )
+    return Response(
+        {'error': 'products: Этот список не может быть пустым'},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
