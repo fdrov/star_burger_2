@@ -1,8 +1,7 @@
-import json
-
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+import phonenumbers
 
 from django.http import JsonResponse
 from django.templatetags.static import static
@@ -62,10 +61,6 @@ def product_list_api(request):
     })
 
 
-# {'products': [{'product': 3, 'quantity': 5}, {'product': 5, 'quantity': 1}],
-# 'firstname': 'IVAN', 'lastname': 'IVANOV', 'phonenumber': '89999992022', 'address': 'Pushkina street, 12, 22, '}
-
-
 @api_view(['POST'])
 def register_order(request):
     order_raw = request.data
@@ -74,7 +69,7 @@ def register_order(request):
         assert isinstance(order_raw['products'], list)
     except KeyError:
         return Response(
-            {'error': 'products: Обязательное поле.'},
+            {'error': 'products: Обязательное поле'},
             status=status.HTTP_400_BAD_REQUEST,
         )
     except AssertionError:
@@ -82,14 +77,47 @@ def register_order(request):
             {'error': 'products: Ожидался list со значениями'},
             status=status.HTTP_422_UNPROCESSABLE_ENTITY,
         )
+    try:
+        if not all([order_raw['firstname'], order_raw['lastname'], order_raw['phonenumber'], order_raw['address']]):
+            return Response(
+                {'error': 'firstname, lastname, phonenumber, address: Это поле не может быть пустым'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    except KeyError:
+        return Response(
+            {'error': 'firstname, lastname, phonenumber, address: Обязательное поле'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if not isinstance(order_raw['firstname'], str):
+        return Response(
+            {'error': 'firstname: Not a valid string.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        phonenumber = phonenumbers.parse(order_raw['phonenumber'])
+    except phonenumbers.NumberParseException as err:
+        return Response(
+            {'error': err},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if not phonenumbers.is_valid_number(phonenumber):
+        return Response(
+            {'error': 'phonenumber: Введен некорректный номер телефона'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     if order_raw.get('products'):
         order = Order.objects.create(firstname=order_raw['firstname'],
-                                     lastname=order_raw['firstname'],
+                                     lastname=order_raw['lastname'],
                                      phonenumber=order_raw['phonenumber'],
                                      address=order_raw['address'],
                                      )
         for order_item in order_raw['products']:
-            product = Product.objects.get(pk=order_item['product'])
+            try:
+                product = Product.objects.get(pk=order_item['product'])
+            except Product.DoesNotExist:
+                return Response(
+                    {'error': f'products: Недопустимый первичный ключ {order_item["product"]}'}
+                )
             OrderProduct(product=product,
                          quantity=order_item['quantity'],
                          order=order,
