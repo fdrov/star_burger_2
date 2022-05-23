@@ -1,6 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer
+from rest_framework.renderers import JSONRenderer
 
 from django.http import JsonResponse
 from django.templatetags.static import static
@@ -67,7 +68,11 @@ class OrderProductSerializer(ModelSerializer):
 
 
 class OrderSerializer(ModelSerializer):
-    products = OrderProductSerializer(many=True, allow_empty=False)
+    products = OrderProductSerializer(
+        many=True,
+        allow_empty=False,
+        write_only=True,
+    )
 
     class Meta:
         model = Order
@@ -91,6 +96,7 @@ def register_order(request):
     ordered_products = [OrderProduct(order=order, **fields) for fields in ordered_products_fields]
     OrderProduct.objects.bulk_create(ordered_products)
 
+    serializer = OrderSerializer(order)
     return Response(
-        {'order_id': order.id},
+        serializer.data,
     )
