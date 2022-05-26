@@ -13,7 +13,16 @@ class RestaurantMenuItemInline(admin.TabularInline):
 
 class OrderProductInline(admin.TabularInline):
     model = OrderProduct
+    fields = ['product', 'show_price', 'quantity', 'cost']
+    readonly_fields = ['show_price', 'cost']
     extra = 1
+
+    def show_price(self, obj):
+        return obj.product.price
+    show_price.short_description = 'price'
+
+    def cost(self, obj):
+        return obj.product.price * obj.quantity
 
 
 @admin.register(Restaurant)
@@ -115,6 +124,7 @@ class ProductCategoryAdmin(admin.ModelAdmin):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     inlines = [OrderProductInline]
+
 
 
 @admin.register(OrderProduct)
