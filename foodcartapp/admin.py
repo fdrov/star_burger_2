@@ -2,8 +2,11 @@ from django.contrib import admin
 from django.shortcuts import reverse
 from django.templatetags.static import static
 from django.utils.html import format_html
+from django.shortcuts import redirect
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from .models import *
+from star_burger.settings import ALLOWED_HOSTS
 
 
 class RestaurantMenuItemInline(admin.TabularInline):
@@ -115,6 +118,14 @@ class ProductCategoryAdmin(admin.ModelAdmin):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     inlines = [OrderProductInline]
+
+    def response_change(self, request, obj):
+        res = super().response_change(request, obj)
+        if 'next' in request.GET:
+            url = request.GET['next']
+            if url_has_allowed_host_and_scheme(url, ALLOWED_HOSTS):
+                return redirect(url)
+        return res
 
 
 @admin.register(OrderProduct)
