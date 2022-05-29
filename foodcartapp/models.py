@@ -3,7 +3,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import MinValueValidator
 
 from django.db import models
-from django.db.models import F, Sum
+from django.db.models import F, Q, Sum
 
 
 class Restaurant(models.Model):
@@ -129,8 +129,18 @@ class OrderQuerySet(models.QuerySet):
         cost_of_product = F('orderproduct__price_fixed') * F('orderproduct__quantity')
         return self.annotate(order_cost=Sum(cost_of_product))
 
+    def not_finished(self):
+        return self.filter(~Q(status='FINISHED'))
+
 
 class Order(models.Model):
+
+    class OrderStatuses(models.TextChoices):
+        NEW = 'NEW', 'Необработанный'
+        IN_DELIVERY = 'IN_DELIVERY', 'Доставляется'
+        FINISHED = 'FINISHED', 'Завершен'
+        CANCELED = 'CANCELED', 'Отменен'
+
     firstname = models.CharField(
         'Имя',
         max_length=250,
@@ -152,6 +162,14 @@ class Order(models.Model):
         through='OrderProduct',
         related_name='orders',
     )
+    status = models.CharField(
+        'Статус заказа',
+        max_length=150,
+        choices=OrderStatuses.choices,
+        default=OrderStatuses.NEW,
+        db_index=True,
+    )
+
     objects = OrderQuerySet.as_manager()
 
     class Meta:
