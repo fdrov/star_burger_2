@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator
 
 from django.db import models
 from django.db.models import F, Q, Sum
+from django.utils import timezone
 
 
 class Restaurant(models.Model):
@@ -172,6 +173,23 @@ class Order(models.Model):
     comment = models.TextField(
         'Комментарий',
         blank=True,
+    )
+    registered_at = models.DateTimeField(
+        'Создан',
+        default=timezone.now,
+        db_index=True,
+    )
+    called_at = models.DateTimeField(
+        'Позвонили',
+        blank=True,
+        null=True,
+        db_index=True,
+    )
+    delivered_at = models.DateTimeField(
+        'Доставлен',
+        blank=True,
+        null=True,
+        db_index=True,
     )
 
     objects = OrderQuerySet.as_manager()
