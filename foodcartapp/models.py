@@ -142,6 +142,13 @@ class Order(models.Model):
         FINISHED = 'FINISHED', 'Завершен'
         CANCELED = 'CANCELED', 'Отменен'
 
+    class PaymentMethods(models.TextChoices):
+        SPECIFY = 'SPECIFY', 'Уточнить'
+        CASH = 'CASH', 'Наличные'
+        CARD_ONLINE = 'CARD_ONLINE', 'Картой онлайн'
+        CARD_DELIVERY = 'CARD_DELIVERY', 'Картой при получении'
+        CRYPTO = 'CRYPTO', 'Криптовалютой'
+
     firstname = models.CharField(
         'Имя',
         max_length=250,
@@ -190,6 +197,13 @@ class Order(models.Model):
         blank=True,
         null=True,
         db_index=True,
+    )
+    payment_method = models.CharField(
+        'Способ оплаты',
+        max_length=200,
+        choices=PaymentMethods.choices,
+        db_index=True,
+        default=PaymentMethods.SPECIFY,
     )
 
     objects = OrderQuerySet.as_manager()
