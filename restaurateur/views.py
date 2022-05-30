@@ -96,7 +96,18 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-    orders = Order.objects.annotate_order_cost().not_finished().order_by('-pk')
+    orders = Order.objects.prefetch_related('order_items')\
+        .for_managers()\
+        .order_by('restaurant_to_cook', '-pk')
+
+    for order in orders:
+        products_in_order = order.order_items.all()
+        restaurants_to_order = Restaurant.objects.all()
+        for product in products_in_order:
+            not_available_filter = ~Q(menu_items__product=product)
+            restaurants_out_of_order = Restaurant.objects.filter(not_available_filter)
+            restaurants_to_order = restaurants_to_order.difference(restaurants_out_of_order)
+        order.restaurants_to_order = restaurants_to_order
 
     context = {
         'orders': orders,

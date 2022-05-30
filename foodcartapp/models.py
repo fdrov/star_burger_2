@@ -133,11 +133,18 @@ class OrderQuerySet(models.QuerySet):
     def not_finished(self):
         return self.filter(~Q(status='FINISHED'))
 
+    def restaurant_not_picked(self):
+        return self.filter(restaurant_to_cook__isnull=True)
+
+    def for_managers(self):
+        return self.annotate_order_cost().not_finished().restaurant_not_picked()
+
 
 class Order(models.Model):
 
     class OrderStatuses(models.TextChoices):
         NEW = 'NEW', 'Необработанный'
+        COOKING = 'COOKING', 'Готовится'
         IN_DELIVERY = 'IN_DELIVERY', 'Доставляется'
         FINISHED = 'FINISHED', 'Завершен'
         CANCELED = 'CANCELED', 'Отменен'
@@ -204,6 +211,15 @@ class Order(models.Model):
         choices=PaymentMethods.choices,
         db_index=True,
         default=PaymentMethods.SPECIFY,
+    )
+    restaurant_to_cook = models.ForeignKey(
+        Restaurant,
+        verbose_name='Ресторан для готовки',
+        on_delete=models.CASCADE,
+        related_name='orders',
+        blank=True,
+        null=True,
+
     )
 
     objects = OrderQuerySet.as_manager()
