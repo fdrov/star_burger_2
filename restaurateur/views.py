@@ -1,14 +1,21 @@
+from geopy.distance import distance
+
 from django import forms
 from django.shortcuts import redirect, render
 from django.views import View
 from django.urls import reverse_lazy
 from django.contrib.auth.decorators import user_passes_test
 
+from django.conf import settings
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 from django.db.models import Q
 
 from foodcartapp.models import Product, Restaurant, Order
+from restaurateur.yandex_geocoder import fetch_coordinates
+
+
+YANDEX_APIKEY = settings.YANDEX_APIKEY
 
 
 class Login(forms.Form):
@@ -100,13 +107,31 @@ def view_orders(request):
         .for_managers()\
         .order_by('restaurant_to_cook', '-pk')
 
+    cache = {}
     for order in orders:
+        if order.address in cache:
+            order.coords = cache[order.address]
+        else:
+            order.coords = fetch_coordinates(YANDEX_APIKEY, order.address)
+            cache[order.address] = order.coords
+
         products_in_order = order.order_items.all()
         restaurants_to_order = Restaurant.objects.all()
         for product in products_in_order:
             not_available_filter = ~Q(menu_items__product=product)
             restaurants_out_of_order = Restaurant.objects.filter(not_available_filter)
             restaurants_to_order = restaurants_to_order.difference(restaurants_out_of_order)
+
+        if restaurants_to_order:
+            for restaurant in restaurants_to_order:
+                if restaurant.address in cache:
+                    coords = cache[restaurant.address]
+                else:
+                    coords = fetch_coordinates(YANDEX_APIKEY, restaurant.address)
+                    cache[restaurant.address] = coords
+                restaurant.coords = coords
+                restaurant.distance_to_client = distance(order.coords, restaurant.coords).km
+        restaurants_to_order = sorted(restaurants_to_order, key=lambda rest: rest.distance_to_client)
         order.restaurants_to_order = restaurants_to_order
 
     context = {

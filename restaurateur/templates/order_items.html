@@ -43,7 +43,7 @@
                 {% for restaurant in order.restaurants_to_order %}
                   <ul>
                     <li>
-                      {{ restaurant.name }}
+                      {{ restaurant.name }} - {{ restaurant.distance_to_client|floatformat:3 }} км
                     </li>
                   </ul>
                 {% endfor %}
