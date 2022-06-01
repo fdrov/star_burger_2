@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'phonenumber_field',
     'debug_toolbar',
     'rest_framework',
+    'location',
 ]
 
 MIDDLEWARE = [

@@ -12,6 +12,7 @@ from django.contrib.auth import views as auth_views
 from django.db.models import Q
 
 from foodcartapp.models import Product, Restaurant, Order
+from location.models import Location
 from restaurateur.yandex_geocoder import fetch_coordinates
 
 
@@ -105,15 +106,21 @@ def view_restaurants(request):
 def view_orders(request):
     orders = Order.objects.prefetch_related('order_items')\
         .for_managers()\
-        .order_by('restaurant_to_cook', '-pk')
+        .order_by('restaurant_to_cook', '-pk')\
 
-    cache = {}
+    # locations = Location.objects
     for order in orders:
-        if order.address in cache:
-            order.coords = cache[order.address]
-        else:
+        try:
+            location = Location.objects.get(address=order.address)
+            order.coords = (location.latitude, location.longitude)
+        except Location.DoesNotExist:
             order.coords = fetch_coordinates(YANDEX_APIKEY, order.address)
-            cache[order.address] = order.coords
+            if order.coords:
+                Location.objects.create(
+                    address=order.address,
+                    latitude=order.coords[0],
+                    longitude=order.coords[1],
+                )
 
         products_in_order = order.order_items.all()
         restaurants_to_order = Restaurant.objects.all()
@@ -121,16 +128,25 @@ def view_orders(request):
             not_available_filter = ~Q(menu_items__product=product)
             restaurants_out_of_order = Restaurant.objects.filter(not_available_filter)
             restaurants_to_order = restaurants_to_order.difference(restaurants_out_of_order)
-
         if restaurants_to_order:
             for restaurant in restaurants_to_order:
-                if restaurant.address in cache:
-                    coords = cache[restaurant.address]
+                try:
+                    location = Location.objects.get(address=restaurant.address)
+                    restaurant.coords = (location.latitude, location.longitude)
+                except Location.DoesNotExist:
+                    restaurant.coords = fetch_coordinates(YANDEX_APIKEY, restaurant.address)
+                    if restaurant.coords:
+                        Location.objects.create(
+                            address=restaurant.address,
+                            latitude=restaurant.coords[0],
+                            longitude=restaurant.coords[1],
+                        )
+                distance_to_client = distance(order.coords, restaurant.coords).km
+                if distance:
+                    restaurant.distance_to_client = distance_to_client
                 else:
-                    coords = fetch_coordinates(YANDEX_APIKEY, restaurant.address)
-                    cache[restaurant.address] = coords
-                restaurant.coords = coords
-                restaurant.distance_to_client = distance(order.coords, restaurant.coords).km
+                    restaurant.distance_to_client = 'Расстояние не определено'
+
         restaurants_to_order = sorted(restaurants_to_order, key=lambda rest: rest.distance_to_client)
         order.restaurants_to_order = restaurants_to_order
 
