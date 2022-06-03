@@ -170,7 +170,10 @@ class Order(models.Model):
         'Номер телефона',
         db_index=True,
     )
-    address = models.TextField(verbose_name='Адрес')
+    address = models.CharField(
+        verbose_name='Адрес',
+        max_length=250,
+    )
     order_items = models.ManyToManyField(
         Product,
         verbose_name='Позиция в заказе',
