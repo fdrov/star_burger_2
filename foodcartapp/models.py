@@ -240,11 +240,13 @@ class OrderProduct(models.Model):
         Product,
         verbose_name='Товар',
         on_delete=models.CASCADE,
+        related_name='ordered_items',
     )
     order = models.ForeignKey(
         Order,
         verbose_name='Номер заказа',
         on_delete=models.CASCADE,
+        related_name='ordered_items',
     )
     quantity = models.IntegerField('Количество товара')
     price_fixed = models.DecimalField(
