@@ -104,7 +104,7 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-    orders = Order.objects.prefetch_related('order_items')\
+    orders = Order.objects.prefetch_related('items')\
         .for_managers()\
         .order_by('restaurant_to_cook', '-pk')\
 
@@ -122,7 +122,7 @@ def view_orders(request):
                     longitude=order.coords[1],
                 )
 
-        products_in_order = order.order_items.all()
+        products_in_order = order.items.all()
         restaurants_to_order = Restaurant.objects.all()
         for product in products_in_order:
             not_available_filter = ~Q(menu_items__product=product)

@@ -174,7 +174,7 @@ class Order(models.Model):
         verbose_name='Адрес',
         max_length=250,
     )
-    order_items = models.ManyToManyField(
+    items = models.ManyToManyField(
         Product,
         verbose_name='Позиция в заказе',
         through='OrderProduct',
