@@ -13,7 +13,7 @@ from django.db.models import Q
 
 from foodcartapp.models import Product, Restaurant, Order
 from location.models import Location
-from restaurateur.yandex_geocoder import fetch_coordinates
+from location.yandex_geocoder import fetch_coordinates
 
 
 YANDEX_APIKEY = settings.YANDEX_APIKEY
