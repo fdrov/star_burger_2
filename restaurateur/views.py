@@ -108,7 +108,6 @@ def view_orders(request):
         .for_managers()\
         .order_by('restaurant_to_cook', '-pk')\
 
-    # locations = Location.objects
     for order in orders:
         try:
             location = Location.objects.get(address=order.address)
