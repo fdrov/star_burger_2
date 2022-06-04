@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import user_passes_test
 from django.conf import settings
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
-from django.db.models import Q
+from django.db.models import Q, Subquery, OuterRef
 
 from foodcartapp.models import Product, Restaurant, Order
 from location.models import Location
@@ -102,44 +102,47 @@ def view_restaurants(request):
     })
 
 
+def get_or_fetch_coords(obj):
+    if obj.latitude and obj.longitude:
+        return obj.latitude, obj.longitude
+    else:
+        coords = fetch_coordinates(YANDEX_APIKEY, obj.address)
+        if coords:
+            Location.objects.create(
+                address=obj.address,
+                latitude=coords[0],
+                longitude=coords[1],
+            )
+            return coords
+
+
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-    orders = Order.objects.prefetch_related('items')\
+    sub = Location.objects.filter(address=OuterRef('address'))
+    orders = Order.objects.prefetch_related('items') \
+        .annotate(longitude=Subquery(sub.values('longitude')),
+                  latitude=Subquery(sub.values('latitude')))\
         .for_managers()\
         .order_by('restaurant_to_cook', '-pk')\
 
     for order in orders:
-        try:
-            location = Location.objects.get(address=order.address)
-            order.coords = (location.latitude, location.longitude)
-        except Location.DoesNotExist:
-            order.coords = fetch_coordinates(YANDEX_APIKEY, order.address)
-            if order.coords:
-                Location.objects.create(
-                    address=order.address,
-                    latitude=order.coords[0],
-                    longitude=order.coords[1],
-                )
+        order.coords = get_or_fetch_coords(order)
 
         products_in_order = order.items.all()
-        restaurants_to_order = Restaurant.objects.all()
+        rest_locations = Location.objects.filter(address=OuterRef('address'))
+        restaurants_to_order = Restaurant.objects \
+            .annotate(longitude=Subquery(rest_locations.values('longitude')),
+                      latitude=Subquery(rest_locations.values('latitude')))
         for product in products_in_order:
-            not_available_filter = ~Q(menu_items__product=product)
-            restaurants_out_of_order = Restaurant.objects.filter(not_available_filter)
+            restaurants_out_of_order = Restaurant.objects \
+                .filter(~Q(menu_items__product=product)) \
+                .annotate(longitude=Subquery(rest_locations.values('longitude')),
+                          latitude=Subquery(rest_locations.values('latitude')))
             restaurants_to_order = restaurants_to_order.difference(restaurants_out_of_order)
         if restaurants_to_order:
             for restaurant in restaurants_to_order:
-                try:
-                    location = Location.objects.get(address=restaurant.address)
-                    restaurant.coords = (location.latitude, location.longitude)
-                except Location.DoesNotExist:
-                    restaurant.coords = fetch_coordinates(YANDEX_APIKEY, restaurant.address)
-                    if restaurant.coords:
-                        Location.objects.create(
-                            address=restaurant.address,
-                            latitude=restaurant.coords[0],
-                            longitude=restaurant.coords[1],
-                        )
+                restaurant.coords = get_or_fetch_coords(restaurant)
+
                 distance_to_client = distance(order.coords, restaurant.coords).km
                 if distance:
                     restaurant.distance_to_client = distance_to_client
