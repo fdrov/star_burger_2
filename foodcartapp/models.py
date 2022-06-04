@@ -127,7 +127,7 @@ class RestaurantMenuItem(models.Model):
 
 class OrderQuerySet(models.QuerySet):
     def annotate_order_cost(self):
-        cost_of_product = F('orderproduct__price_fixed') * F('orderproduct__quantity')
+        cost_of_product = F('ordered_items__price_fixed') * F('ordered_items__quantity')
         return self.annotate(order_cost=Sum(cost_of_product))
 
     def not_finished(self):
