@@ -127,27 +127,25 @@ def view_orders(request):
     for order in orders:
         order.coords = get_or_fetch_coords(order)
 
-        products_in_order = order.items.all()
         rest_locations = Location.objects.filter(address=OuterRef('address'))
         restaurants_to_order = Restaurant.objects \
             .annotate(longitude=Subquery(rest_locations.values('longitude')),
                       latitude=Subquery(rest_locations.values('latitude')))
+
+        products_in_order = order.items.all()
         for product in products_in_order:
             restaurants_out_of_order = Restaurant.objects \
                 .filter(~Q(menu_items__product=product)) \
                 .annotate(longitude=Subquery(rest_locations.values('longitude')),
                           latitude=Subquery(rest_locations.values('latitude')))
             restaurants_to_order = restaurants_to_order.difference(restaurants_out_of_order)
-        if restaurants_to_order:
-            for restaurant in restaurants_to_order:
-                restaurant.coords = get_or_fetch_coords(restaurant)
 
-                distance_to_client = distance(order.coords, restaurant.coords).km
-                if distance:
-                    restaurant.distance_to_client = distance_to_client
-                else:
-                    restaurant.distance_to_client = 'Расстояние не определено'
-
+        for restaurant in restaurants_to_order:
+            restaurant.coords = get_or_fetch_coords(restaurant)
+            distance_to_client = distance(order.coords, restaurant.coords).km
+            if not distance:
+                restaurant.distance_to_client = 'Расстояние не определено'
+            restaurant.distance_to_client = distance_to_client
         restaurants_to_order = sorted(restaurants_to_order, key=lambda rest: rest.distance_to_client)
         order.restaurants_to_order = restaurants_to_order
 
