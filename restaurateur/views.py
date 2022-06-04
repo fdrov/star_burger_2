@@ -110,8 +110,7 @@ def get_or_fetch_coords(obj):
         if coords:
             Location.objects.create(
                 address=obj.address,
-                latitude=coords[0],
-                longitude=coords[1],
+                **dict(zip(['latitude', 'longitude'], coords)),
             )
             return coords
 
