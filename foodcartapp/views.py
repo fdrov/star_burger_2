@@ -98,7 +98,7 @@ def register_order(request):
     for ordered_product in ordered_products_fields:
         OrderProduct(
             order=order,
-            price_fixed=ordered_product['product'].price,
+            fixed_price=ordered_product['product'].price,
             product=ordered_product['product'],
             quantity=ordered_product['quantity']
         ).save()

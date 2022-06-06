@@ -127,7 +127,7 @@ class RestaurantMenuItem(models.Model):
 
 class OrderQuerySet(models.QuerySet):
     def annotate_order_cost(self):
-        cost_of_product = F('ordered_items__price_fixed') * F('ordered_items__quantity')
+        cost_of_product = F('ordered_items__fixed_price') * F('ordered_items__quantity')
         return self.annotate(order_cost=Sum(cost_of_product))
 
     def not_finished(self):
@@ -252,7 +252,7 @@ class OrderProduct(models.Model):
         'Количество товара',
         validators=[MinValueValidator(1)],
     )
-    price_fixed = models.DecimalField(
+    fixed_price = models.DecimalField(
         'Цена на момент заказа',
         max_digits=8,
         decimal_places=2,
