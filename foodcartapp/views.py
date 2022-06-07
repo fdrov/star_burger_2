@@ -95,13 +95,15 @@ def register_order(request):
     )
 
     ordered_products_fields = validated_data['products']
+    products_to_save = []
     for ordered_product in ordered_products_fields:
-        OrderProduct(
+        products_to_save.append(OrderProduct(
             order=order,
             fixed_price=ordered_product['product'].price,
             product=ordered_product['product'],
             quantity=ordered_product['quantity']
-        ).save()
+        ))
+    OrderProduct.objects.bulk_create(products_to_save)
 
     serializer = OrderSerializer(order)
     return Response(
