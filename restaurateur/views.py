@@ -108,9 +108,9 @@ def get_or_fetch_coords(obj):
     else:
         coords = fetch_coordinates(YANDEX_APIKEY, obj.address)
         if coords:
-            Location.objects.create(
+            Location.objects.get_or_create(
                 address=obj.address,
-                **dict(zip(['latitude', 'longitude'], coords)),
+                defaults={**dict(zip(['latitude', 'longitude'], coords))},
             )
             return coords
 
@@ -122,7 +122,7 @@ def view_orders(request):
         .annotate(longitude=Subquery(sub.values('longitude')),
                   latitude=Subquery(sub.values('latitude')))\
         .for_managers()\
-        .order_by('restaurant_to_cook', '-pk')\
+        .order_by('restaurant_to_cook', '-pk')
 
     for order in orders:
         order.coords = get_or_fetch_coords(order)
