@@ -9,12 +9,11 @@ from django.contrib.auth.decorators import user_passes_test
 from django.conf import settings
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
-from django.db.models import Q, Subquery, OuterRef
+from django.db.models import Subquery, OuterRef
 
-from foodcartapp.models import Product, Restaurant, Order
+from foodcartapp.models import Product, Restaurant, Order, OrderProduct, RestaurantMenuItem
 from location.models import Location
 from location.yandex_geocoder import fetch_coordinates
-
 
 YANDEX_APIKEY = settings.YANDEX_APIKEY
 
@@ -117,37 +116,49 @@ def get_or_fetch_coords(obj):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
+    order_items = OrderProduct.objects\
+        .filter(order__status='NEW')\
+        .values('order_id', 'product')
+
     sub = Location.objects.filter(address=OuterRef('address'))
-    orders = Order.objects.prefetch_related('items') \
+    orders = Order.objects\
         .annotate(longitude=Subquery(sub.values('longitude')),
                   latitude=Subquery(sub.values('latitude')))\
         .for_managers()\
         .order_by('restaurant_to_cook', '-pk')
 
+    rest_locations = Location.objects.filter(address=OuterRef('restaurant__address'))
+    all_restaurants_menu = RestaurantMenuItem.objects\
+                                .filter(availability=True)\
+                                .annotate(longitude=Subquery(rest_locations.values('longitude')),
+                                          latitude=Subquery(rest_locations.values('latitude')))\
+                                .select_related('product')\
+                                .select_related('restaurant')
+
     for order in orders:
         order.coords = get_or_fetch_coords(order)
+        order_products = [p for p in order_items if p['order_id'] == order.id]
+        restaurants_can_cook_order = []
+        for product in order_products:
+            restaurants_can_cook_product = set()
+            for item in all_restaurants_menu:
+                if item.product_id == product['product']:
+                    item.restaurant.longitude = item.longitude
+                    item.restaurant.latitude = item.latitude
+                    restaurants_can_cook_product.add(item.restaurant)
+            restaurants_can_cook_order.append(restaurants_can_cook_product)
+        restaurants_can_cook_order = set.intersection(*restaurants_can_cook_order)
 
-        rest_locations = Location.objects.filter(address=OuterRef('address'))
-        restaurants_to_order = Restaurant.objects \
-            .annotate(longitude=Subquery(rest_locations.values('longitude')),
-                      latitude=Subquery(rest_locations.values('latitude')))
-
-        products_in_order = order.items.all()
-        for product in products_in_order:
-            restaurants_out_of_order = Restaurant.objects \
-                .filter(~Q(menu_items__product=product)) \
-                .annotate(longitude=Subquery(rest_locations.values('longitude')),
-                          latitude=Subquery(rest_locations.values('latitude')))
-            restaurants_to_order = restaurants_to_order.difference(restaurants_out_of_order)
-
-        for restaurant in restaurants_to_order:
-            restaurant.coords = get_or_fetch_coords(restaurant)
-            distance_to_client = distance(order.coords, restaurant.coords).km
-            if not distance:
-                restaurant.distance_to_client = 'Расстояние не определено'
-            restaurant.distance_to_client = distance_to_client
-        restaurants_to_order = sorted(restaurants_to_order, key=lambda rest: rest.distance_to_client)
-        order.restaurants_to_order = restaurants_to_order
+        order.restaurants_to_order = []
+        if restaurants_can_cook_order:
+            for restaurant in restaurants_can_cook_order:
+                restaurant.coords = get_or_fetch_coords(restaurant)
+                distance_to_client = round(distance(order.coords, restaurant.coords).km, 3)
+                if not distance_to_client:
+                    order.restaurants_to_order.append([0, 'Расстояние не определено'])
+                    continue
+                order.restaurants_to_order.append([distance_to_client, f'{restaurant} - {distance_to_client}'])
+            order.restaurants_to_order.sort(key=lambda distance: distance[0])
 
     context = {
         'orders': orders,

@@ -21,13 +21,16 @@ class OrderProductInline(admin.TabularInline):
 
 @admin.register(Restaurant)
 class RestaurantAdmin(admin.ModelAdmin):
+    def name_with_products(self):
+        return f'{self.name}: {[p.product.name for p in self.menu_items.all()]}'
+
     search_fields = [
         'name',
         'address',
         'contact_phone',
     ]
     list_display = [
-        'name',
+        name_with_products,
         'address',
         'contact_phone',
     ]
