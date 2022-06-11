@@ -150,15 +150,16 @@ def view_orders(request):
         restaurants_can_cook_order = set.intersection(*restaurants_can_cook_order)
 
         order.restaurants_to_order = []
-        if restaurants_can_cook_order:
-            for restaurant in restaurants_can_cook_order:
-                restaurant.coords = get_or_fetch_coords(restaurant)
-                distance_to_client = round(distance(order.coords, restaurant.coords).km, 3)
-                if not distance_to_client:
-                    order.restaurants_to_order.append([0, 'Расстояние не определено'])
-                    continue
-                order.restaurants_to_order.append([distance_to_client, f'{restaurant} - {distance_to_client}'])
-            order.restaurants_to_order.sort(key=lambda distance: distance[0])
+        if not restaurants_can_cook_order:
+            continue
+        for restaurant in restaurants_can_cook_order:
+            restaurant.coords = get_or_fetch_coords(restaurant)
+            distance_to_client = round(distance(order.coords, restaurant.coords).km, 3)
+            if not distance_to_client:
+                order.restaurants_to_order.append([0, 'Расстояние не определено'])
+                continue
+            order.restaurants_to_order.append([distance_to_client, f'{restaurant} - {distance_to_client}'])
+        order.restaurants_to_order.sort(key=lambda distance: distance[0])
 
     context = {
         'orders': orders,
