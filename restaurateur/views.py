@@ -116,43 +116,21 @@ def get_or_fetch_coords(obj):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-    order_items = OrderProduct.objects\
-        .filter(order__status='NEW')\
-        .values('order_id', 'product')
-
     sub = Location.objects.filter(address=OuterRef('address'))
     orders = Order.objects\
         .annotate(longitude=Subquery(sub.values('longitude')),
                   latitude=Subquery(sub.values('latitude')))\
         .for_managers()\
-        .order_by('restaurant_to_cook', '-pk')
-
-    rest_locations = Location.objects.filter(address=OuterRef('restaurant__address'))
-    all_restaurants_menu = RestaurantMenuItem.objects\
-                                .filter(availability=True)\
-                                .annotate(longitude=Subquery(rest_locations.values('longitude')),
-                                          latitude=Subquery(rest_locations.values('latitude')))\
-                                .select_related('product')\
-                                .select_related('restaurant')
+        .order_by('restaurant_to_cook', '-pk')\
+        .fetch_restaurants_can_cook_order()
 
     for order in orders:
         order.coords = get_or_fetch_coords(order)
-        order_products = [p for p in order_items if p['order_id'] == order.id]
-        restaurants_can_cook_order = []
-        for product in order_products:
-            restaurants_can_cook_product = set()
-            for item in all_restaurants_menu:
-                if item.product_id == product['product']:
-                    item.restaurant.longitude = item.longitude
-                    item.restaurant.latitude = item.latitude
-                    restaurants_can_cook_product.add(item.restaurant)
-            restaurants_can_cook_order.append(restaurants_can_cook_product)
-        restaurants_can_cook_order = set.intersection(*restaurants_can_cook_order)
 
         order.restaurants_to_order = []
-        if not restaurants_can_cook_order:
+        if not order.restaurants_can_cook_order:
             continue
-        for restaurant in restaurants_can_cook_order:
+        for restaurant in order.restaurants_can_cook_order:
             restaurant.coords = get_or_fetch_coords(restaurant)
             distance_to_client = round(distance(order.coords, restaurant.coords).km, 3)
             if not distance_to_client:

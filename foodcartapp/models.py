@@ -139,6 +139,39 @@ class OrderQuerySet(models.QuerySet):
     def for_managers(self):
         return self.annotate_order_cost().not_finished().restaurant_not_picked()
 
+    def fetch_restaurants_can_cook_order(self):
+        from django.db.models import Subquery, OuterRef
+
+        from location.models import Location
+
+        order_items = OrderProduct.objects \
+            .filter(order__status='NEW') \
+            .values('order_id', 'product')
+
+        rest_locations = Location.objects.filter(address=OuterRef('restaurant__address'))
+        all_restaurants_menu = RestaurantMenuItem.objects \
+            .filter(availability=True) \
+            .annotate(longitude=Subquery(rest_locations.values('longitude')),
+                      latitude=Subquery(rest_locations.values('latitude'))) \
+            .select_related('product') \
+            .select_related('restaurant')
+
+        orders = set()
+        for order in self.all():
+            order_products = [p for p in order_items if p['order_id'] == order.id]
+            restaurants_can_cook_order = []
+            for product in order_products:
+                restaurants_can_cook_product = set()
+                for item in all_restaurants_menu:
+                    if item.product_id == product['product']:
+                        item.restaurant.longitude = item.longitude
+                        item.restaurant.latitude = item.latitude
+                        restaurants_can_cook_product.add(item.restaurant)
+                restaurants_can_cook_order.append(restaurants_can_cook_product)
+            order.restaurants_can_cook_order = set.intersection(*restaurants_can_cook_order)
+            orders.add(order)
+        return orders
+
 
 class Order(models.Model):
 
