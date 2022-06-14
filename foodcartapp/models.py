@@ -154,8 +154,8 @@ class OrderQuerySet(models.QuerySet):
             .select_related('product') \
             .select_related('restaurant')
 
-        orders = set()
-        for order in self.all():
+        orders = self.all()
+        for order in orders:
             order_products = [p for p in order_items if p['order_id'] == order.id]
             restaurants_can_cook_order = []
             for product in order_products:
@@ -167,7 +167,6 @@ class OrderQuerySet(models.QuerySet):
                         restaurants_can_cook_product.add(item.restaurant)
                 restaurants_can_cook_order.append(restaurants_can_cook_product)
             order.restaurants_can_cook_order = set.intersection(*restaurants_can_cook_order)
-            orders.add(order)
         return orders
 
 
