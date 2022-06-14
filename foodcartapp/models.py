@@ -3,8 +3,10 @@ from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import MinValueValidator
 
 from django.db import models
-from django.db.models import F, Q, Sum
+from django.db.models import F, Q, Sum, Subquery, OuterRef
 from django.utils import timezone
+
+from location.models import Location
 
 
 class Restaurant(models.Model):
@@ -140,10 +142,6 @@ class OrderQuerySet(models.QuerySet):
         return self.annotate_order_cost().not_finished().restaurant_not_picked()
 
     def fetch_restaurants_can_cook_order(self):
-        from django.db.models import Subquery, OuterRef
-
-        from location.models import Location
-
         order_items = OrderProduct.objects \
             .filter(order__status='NEW') \
             .values('order_id', 'product')
