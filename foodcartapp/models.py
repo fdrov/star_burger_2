@@ -142,7 +142,7 @@ class OrderQuerySet(models.QuerySet):
         return self.annotate_order_cost().not_finished().restaurant_not_picked()
 
     def fetch_restaurants_can_cook_order(self):
-        order_items = OrderProduct.objects \
+        all_ordered_products = OrderProduct.objects \
             .filter(order__status='NEW') \
             .values('order_id', 'product')
 
@@ -156,9 +156,9 @@ class OrderQuerySet(models.QuerySet):
 
         orders = self.all()
         for order in orders:
-            order_products = [p for p in order_items if p['order_id'] == order.id]
+            products_in_order = [p for p in all_ordered_products if p['order_id'] == order.id]
             restaurants_can_cook_order = []
-            for product in order_products:
+            for product in products_in_order:
                 restaurants_can_cook_product = set()
                 for item in all_restaurants_menu:
                     if item.product_id == product['product']:
