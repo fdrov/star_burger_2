@@ -154,7 +154,7 @@ class OrderQuerySet(models.QuerySet):
             .select_related('product') \
             .select_related('restaurant')
 
-        orders = self.all()
+        orders = self
         for order in orders:
             products_in_order = [p for p in all_ordered_products if p['order_id'] == order.id]
             restaurants_can_cook_order = []
