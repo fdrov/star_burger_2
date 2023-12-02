@@ -53,9 +53,32 @@ python -m venv venv
 ```sh
 pip install -r requirements.txt
 ```
+### База даных
+Postgres
+
+Создайте базу данных `MYPROJECT`, пользователя `MYPROJECTUSER` с паролем `PASSWORD`. Не забудьте дать привилегии вашему пользователю. (туториал [Создать бд Postgres в Ubuntu](https://www.digitalocean.com/community/tutorials/how-to-use-postgresql-with-your-django-application-on-ubuntu-14-04))
+
+Из этих данных составьте DATABASE_URL в формате `postgres://MYPROJECTUSER:PASSWORD@HOST:PORT/MYPROJECT`. Этот URL нам пригодится в следующем шаге.
+
+### Заполните переменные окружения.
+Для этого создайте `.env` файл по шаблону `.env.template` и заполните вашими данными.
+
+- `YANDEX_APIKEY` Для работы Яндекс-геокодера нужен токен. Получить его можно в [кабинете разработчика](https://developer.tech.yandex.ru/). Записать токен в соответствующую переменную
+- `SECRET_KEY` = 'YOUR_OWN_VERY_SECRET_KEY'
+- `ROLLBAR_TOKEN` = '1234567'
+- `DATABASE_URL` = `postgres://MYPROJECTUSER:PASSWORD@HOST:PORT/MYPROJECT`
+
+Необязательные переменные окружения
+
+- `ENVIRONMENT` = 'development' # default 'development'
+
+- `DEBUG` = True # default True
 
 Создайте файл базы данных SQLite и отмигрируйте её следующей командой:
 
+### Запуск сервера
+
+Теперь, когда переменные окружения заполнены, мы можем подключиться к базе данных и применить миграции:
 ```sh
 python manage.py migrate
 ```
@@ -67,23 +90,6 @@ python manage.py runserver
 ```
 
 Откройте сайт в браузере по адресу [http://127.0.0.1:8000/](http://127.0.0.1:8000/). Если вы увидели пустую белую страницу, то не пугайтесь. Просто фронтенд пока ещё не собран. Переходите к следующему разделу README.
-
-### Заполните переменные окружения.
-Для этого создайте `.env` файл по шаблону `.env.template` и заполните вашими данными.
-
-- `YANDEX_APIKEY` Для работы Яндекс-геокодера нужен токен. Получить его можно в [кабинете разработчика](https://developer.tech.yandex.ru/). Записать токен в соответствующую переменную
-
-- `SECRET_KEY` = 'YOUR_OWN_VERY_SECRET_KEY'
-
-- `ROLLBAR_TOKEN` = '1234567'
-
-Необязательные переменные окружения
-
-- `ENVIRONMENT` = 'development' # default 'development'
-
-- `DEBUG` = True # default True
-
-
 
 ### Собрать фронтенд
 
