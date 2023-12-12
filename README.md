@@ -74,8 +74,6 @@ Postgres
 
 - `DEBUG` = True # default True
 
-Создайте файл базы данных SQLite и отмигрируйте её следующей командой:
-
 ### Запуск сервера
 
 Теперь, когда переменные окружения заполнены, мы можем подключиться к базе данных и применить миграции:
@@ -121,7 +119,7 @@ npm ci --dev
 
 Команда `npm ci` создаст каталог `node_modules` и установит туда пакеты Node.js. Получится аналог виртуального окружения как для Python, но для Node.js.
 
-Помимо прочего будет установлен [Parcel](https://parceljs.org/) — это упаковщик веб-приложений, похожий на [Webpack](https://webpack.js.org/). В отличии от Webpack он прост в использовании и совсем не требует настроек.
+Помимо прочего будет установлен [Parcel](https://parceljs.org/) — это упаковщик веб-приложений, похожий на [Webpack](https://webpack.js.org/). В отличие от Webpack, он прост в использовании и совсем не требует настроек.
 
 Теперь запустите сборку фронтенда и не выключайте. Parcel будет работать в фоне и следить за изменениями в JS-коде:
 
@@ -165,6 +163,54 @@ Parcel будет следить за файлами в каталоге `bundle
 - `DEBUG` — дебаг-режим. Поставьте `False`.
 - `SECRET_KEY` — секретный ключ проекта. Он отвечает за шифрование на сайте. Например, им зашифрованы все пароли на вашем сайте. Не стоит использовать значение по-умолчанию, **замените на своё**.
 - `ALLOWED_HOSTS` — [см. документацию Django](https://docs.djangoproject.com/en/3.1/ref/settings/#allowed-hosts)
+
+## Инструкция по быстрому обновлению кода на сервере
+Пример скрипта для быстрого повторного деплоя проекта:
+```bash
+#!/bin/bash
+
+# strict mode
+set -euo pipefail
+IFS=$'\n\t'
+
+cd /opt/star_burger_2/  # указать рабочую директорию проекта
+
+# git
+if [[ $(git pull) == 'Already up to date.' ]]; then
+    echo 'already up to date'
+else
+    echo 'Pulling done.'
+fi
+
+# node
+npm ci --dev
+node_modules/.bin/parcel build bundles-src/index.js --dist-dir bundles --public-url=
+
+# django
+source venv/bin/activate
+
+export SECRET_KEY='deployment_secret' # для деплоя достаточно любого значения
+export DATABASE_URL='postgres://MYPROJECTUSER:PASSWORD@HOST:PORT/MYPROJECT'  # DATABASE_URL вашей рабочей базы данных
+export YANDEX_APIKEY='deployment_yandex'  # для деплоя достаточно любого значения
+export ROLLBAR_TOKEN='deployment_rollbar'  # ваш ROLLBAR_TOKEN
+
+python -m pip install -r requirements.txt
+python manage.py migrate
+python manage.py collectstatic --noinput --clear -v 0
+
+# services
+systemctl daemon-reload
+systemctl reload nginx.service
+systemctl restart starburger.service
+
+# rollbar
+commit_hash=$(git rev-parse --short HEAD)
+commit_message=$(git log --format=%B -n 1 $commit_hash)
+commit_author=$(git log --format='%an' -n 1 $commit_hash)
+curl -s -H "X-Rollbar-Access-Token: $ROLLBAR_TOKEN" -H "Content-Type: application/json" -X POST 'https://api.rollbar.com/api/1/deploy' -d '{"environment": "production", "revision": "'$commit_hash'", "rollbar_name": "'$commit_author'", "local_username": "'$commit_author'", "comment": "'$commit_message'", "status": "succeeded"}' > /dev/null
+
+echo 'Deploying is finished'
+```
 
 ## Цели проекта
 
