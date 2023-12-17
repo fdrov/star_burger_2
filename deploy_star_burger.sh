@@ -5,7 +5,7 @@ set -euo pipefail
 IFS=$'\n\t'
 
 cd /opt/star_burger_2/
-
+: '
 # git
 if [[ $(git pull) == 'Already up to date.' ]]; then
     echo 'Git: already up to date'
@@ -18,6 +18,7 @@ fi
 npm ci --dev > /dev/null 2>&1
 node_modules/.bin/parcel build bundles-src/index.js --dist-dir bundles --public-url= | grep "Built in"
 
+'
 
 # django
 source /opt/star_burger_2/venv/bin/activate
