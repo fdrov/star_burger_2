@@ -12,7 +12,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 
-SECRET_KEY = env.str('SECRET_KEY', 'dummy_secret_key')
+SECRET_KEY = env.str('SECRET_KEY')
 DEBUG = env.bool('DEBUG', True)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', ['127.0.0.1', 'localhost'])
@@ -133,11 +133,12 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "bundles"),
 ]
 
-YANDEX_APIKEY = env('YANDEX_APIKEY', 'dummy_yandex_apikey')
+YANDEX_APIKEY = env('YANDEX_APIKEY')
 
-ROLLBAR = {
-    'access_token': env('ROLLBAR_TOKEN', 'dummy_rollbar_token'),
-    'environment': env('ENVIRONMENT', 'development'),
-    'code_version': '1.0',
-    'root': BASE_DIR,
-}
+if env('ROLLBAR_TOKEN', False):
+    ROLLBAR = {
+        'access_token': env('ROLLBAR_TOKEN'),
+        'environment': env('ENVIRONMENT', 'development'),
+        'code_version': '1.0',
+        'root': BASE_DIR,
+    }

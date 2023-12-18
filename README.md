@@ -1,4 +1,4 @@
-# Сайт доставки еды Star Burger
+**# Сайт доставки еды Star Burger
 
 Это сайт сети ресторанов Star Burger. Здесь можно заказать превосходные бургеры с доставкой на дом.
 
@@ -65,15 +65,13 @@ Postgres
 
 - `YANDEX_APIKEY` Для работы Яндекс-геокодера нужен токен. Получить его можно в [кабинете разработчика](https://developer.tech.yandex.ru/). Записать токен в соответствующую переменную
 - `SECRET_KEY` = 'YOUR_OWN_VERY_SECRET_KEY'
-- `ROLLBAR_TOKEN` = '1234567'
 - `DATABASE_URL` = `postgres://MYPROJECTUSER:PASSWORD@HOST:PORT/MYPROJECT`
 
 Необязательные переменные окружения
 
 - `ENVIRONMENT` = 'development' # default 'development'
-
 - `DEBUG` = True # default True
-
+- `ROLLBAR_TOKEN` = '1234567'
 ### Запуск сервера
 
 Теперь, когда переменные окружения заполнены, мы можем подключиться к базе данных и применить миграции:
@@ -179,4 +177,4 @@ Parcel будет следить за файлами в каталоге `bundle
 
 Где используется репозиторий:
 
-- Второй и третий урок [учебного модуля Django](https://dvmn.org/modules/django/)
+- Второй и третий урок [учебного модуля Django](https://dvmn.org/modules/django/)**
